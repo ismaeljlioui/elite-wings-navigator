@@ -1,5 +1,15 @@
 "use client";
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { AppSelect } from "@/components/ui/app-select";
+import { GlassDock } from "@/components/glass-dock";
+import { PriceBars } from "@/components/price-bars";
+import { CruiseSlider } from "@/components/cruise-slider";
+import { RangeScrubber } from "@/components/range-scrubber";
+import { Seek } from "@/components/seek";
+import { ShortlistStack } from "@/components/shortlist-stack";
+import TiltCard from "@/components/tilt-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import {
   Plane,
   Armchair,
@@ -26,6 +36,8 @@ import {
   Compass,
 } from "lucide-react";
 import source from "../data/aircraft.json";
+import MissionPlanner from "../components/mission-planner";
+import { type Mission, meetsMission } from "../lib/mission";
 type Jet = (typeof source)[number];
 type Tab = "Performance" | "Interior" | "Compare";
 const jets = source as Jet[];
@@ -100,57 +112,14 @@ function Photo({
       <span>Image unavailable</span>
     </div>
   ) : (
-    <img src={src} alt={alt} {...props} onError={() => setFailed(true)} />
-  );
-}
-function Shelf({
-  title,
-  sub,
-  items,
-  renderCard,
-}: {
-  title: string;
-  sub: string;
-  items: Jet[];
-  renderCard: (jet: Jet) => ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  return (
-    <section className="shelf">
-      <div className="section-heading">
-        <div>
-          <h2>
-            {title}
-            <ChevronRight size={21} />
-          </h2>
-          <p>{sub}</p>
-        </div>
-        <div className="shelf-controls">
-          <button
-            aria-label={`Scroll ${title} left`}
-            onClick={() =>
-              ref.current?.scrollBy({ left: -650, behavior: "smooth" })
-            }
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            aria-label={`Scroll ${title} right`}
-            onClick={() =>
-              ref.current?.scrollBy({ left: 650, behavior: "smooth" })
-            }
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-      <div className="card-row" ref={ref}>
-        {items.map(renderCard)}
-      </div>
-    </section>
+    <img key={src} src={src} alt={alt} {...props} onError={() => setFailed(true)} />
   );
 }
 export default function Home() {
+  const [mission, setMission] = useState<Mission | null>(null);
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [differencesOnly, setDifferencesOnly] = useState(false);
+  const [compareCabin, setCompareCabin] = useState(false);
   const [tab, setTab] = useState<Tab>("Performance");
   const [query, setQuery] = useState("");
   const [manufacturer, setManufacturer] = useState("All manufacturers");
@@ -160,9 +129,10 @@ export default function Home() {
   const [saved, setSaved] = useState<number[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [savedOnly, setSavedOnly] = useState(false);
-  const [sort, setSort] = useState("Recommended");
+  const [sort, setSort] = useState("Range: longest first");
   const [filters, setFilters] = useState(false);
   const [maxPrice, setMaxPrice] = useState(100);
+  const [minPrice, setMinPrice] = useState(0);
   const [minSpeed, setMinSpeed] = useState(0);
   const [standup, setStandup] = useState(false);
   const [detail, setDetail] = useState<Jet | null>(null);
@@ -202,11 +172,13 @@ export default function Home() {
   }, [toast]);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
+    if (filters)
+      document.querySelector<HTMLButtonElement>(".close-sidebar")?.focus();
     const fn = (e: KeyboardEvent) => {
       if (e.key === "Tab" && (detail || filters)) {
         const dialog = document.querySelector("[role=dialog]");
         const focusable = dialog?.querySelectorAll<HTMLElement>(
-          "button,input,select,a[href]",
+          "button,input,select,a[href],[role=slider]",
         );
         if (focusable?.length) {
           const first = focusable[0],
@@ -220,7 +192,7 @@ export default function Home() {
           }
         }
       }
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !e.defaultPrevented) {
         setDetail(null);
         setFilters(false);
         setMenu(false);
@@ -249,16 +221,20 @@ export default function Home() {
     setPassengers(0);
     setCat("All aircraft");
     setMaxPrice(100);
+    setMinPrice(0);
     setMinSpeed(0);
     setStandup(false);
     setSavedOnly(false);
+    setMission(null);
   };
+  const searchTerm = query.trim().replace(/\s+/g, " ").toLowerCase();
   const filtered = jets.filter(
     (j) =>
-      (!query ||
+      (!mission || meetsMission(j, mission)) &&
+      (!searchTerm ||
         `${j.Model} ${j.manufacturers}`
           .toLowerCase()
-          .includes(query.toLowerCase())) &&
+          .includes(searchTerm)) &&
       (manufacturer === "All manufacturers" ||
         j.manufacturers === manufacturer) &&
       j.range >= minRange &&
@@ -266,16 +242,19 @@ export default function Home() {
       (cat === "All aircraft" || category(j) === cat) &&
       (!savedOnly || saved.includes(j.id)) &&
       Number(j.base_price) <= maxPrice * 1000000 &&
+      Number(j.base_price) >= minPrice * 1000000 &&
       (!minSpeed || Number(j.high_speed_cruise) >= minSpeed) &&
       (!standup || Number(j.cabin_height) >= 72),
   );
   const active = !!(
+    mission ||
     query ||
     manufacturer !== "All manufacturers" ||
     minRange ||
     passengers ||
     cat !== "All aircraft" ||
     maxPrice < 100 ||
+    minPrice > 0 ||
     minSpeed ||
     standup ||
     savedOnly
@@ -292,434 +271,18 @@ export default function Home() {
   const comparison = selected
     .map((id) => jets.find((j) => j.id === id))
     .filter(Boolean) as Jet[];
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.querySelector<HTMLElement>(".dashboard-shell,.compare-main")?.scrollTo({ top: 0, behavior: "instant" });
+  }, [tab, searchTerm, manufacturer, minRange, passengers, cat, savedOnly, minPrice, maxPrice, minSpeed, standup, mission, sort]);
   const changeTab = (t: Tab) => {
+    setFilters(false);
     setTab(t);
     setMenu(false);
   };
-  function Card({ jet: j }: { jet: Jet }) {
+  function comparisonPicker(i: number) {
     return (
-      <article className="jet-card">
-        <div className="photo-wrap">
-          <button
-            className="photo-button"
-            onClick={() => setDetail(j)}
-            aria-label={`Explore ${displayName(j.Model)}`}
-          >
-            <Photo
-              src={tab === "Interior" ? j.interiorImage : j.image}
-              alt={`${maker(j.manufacturers)} ${displayName(j.Model)} ${tab === "Interior" ? "cabin" : "exterior"}`}
-            />
-          </button>
-          <span className="card-badge">{category(j)}</span>
-          <button
-            className={`heart ${saved.includes(j.id) ? "is-saved" : ""}`}
-            aria-label={`${saved.includes(j.id) ? "Unsave" : "Save"} ${j.Model}`}
-            aria-pressed={saved.includes(j.id)}
-            onClick={() => toggleSaved(j.id)}
-          >
-            <Heart
-              size={21}
-              fill={saved.includes(j.id) ? "currentColor" : "#00000035"}
-            />
-          </button>
-          <button
-            className={`compare-add ${selected.includes(j.id) ? "is-selected" : ""}`}
-            onClick={() => toggleCompare(j.id)}
-            aria-label={`${selected.includes(j.id) ? "Remove" : "Compare"} ${j.Model}`}
-          >
-            {selected.includes(j.id) ? <Check size={14} /> : <Plus size={14} />}
-            <span>{selected.includes(j.id) ? "Added" : "Compare"}</span>
-          </button>
-        </div>
-        <div className="card-title">
-          <div>
-            <p className="maker">{maker(j.manufacturers)}</p>
-            <button onClick={() => setDetail(j)}>{displayName(j.Model)}</button>
-          </div>
-          <span className="price">
-            {price(j.base_price)}
-            <small>base price</small>
-          </span>
-        </div>
-        <div className="metrics">
-          {tab === "Interior" ? (
-            <>
-              <span>
-                <Users />
-                {fmt(j.max_passengers)} <small>pax</small>
-              </span>
-              <span>
-                <Maximize />
-                {fmt(j.cabin_volume)} <small>ft³</small>
-              </span>
-              <span>
-                <MoveHorizontal />
-                {j.cabin_width_text}
-              </span>
-            </>
-          ) : (
-            <>
-              <span>
-                <Globe2 />
-                {fmt(j.range)} <small>nm</small>
-              </span>
-              <span>
-                <Gauge />
-                {j.high_speed_cruise ? fmt(j.high_speed_cruise) : "—"}{" "}
-                {j.high_speed_cruise && <small>ktas</small>}
-              </span>
-              <span>
-                <Users />
-                {j.max_passengers ? fmt(j.max_passengers) : "—"}
-              </span>
-            </>
-          )}
-        </div>
-      </article>
-    );
-  }
-
-  return (
-    <>
-      <header>
-        <div className="topbar">
-          <a className="brand" href="/" aria-label="Elite Wings home">
-            <span className="brand-symbol">
-              <Wind size={34} />
-            </span>
-            <span>
-              ELITE WINGS<small>THE BUSINESS AVIATION AUTHORITY</small>
-            </span>
-          </a>
-          <nav aria-label="Navigator tabs">
-            {(["Performance", "Interior", "Compare"] as Tab[]).map((t, i) => {
-              const Icon = [Plane, Armchair, Columns3][i];
-              return (
-                <button
-                  key={t}
-                  className={tab === t ? "active" : ""}
-                  onClick={() => changeTab(t)}
-                >
-                  <Icon size={23} />
-                  <span>{t}</span>
-                  {t === "Compare" && selected.length > 0 && (
-                    <b>{selected.length}</b>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-          <div className="header-actions">
-            <button
-              aria-label="Saved aircraft"
-              aria-pressed={savedOnly}
-              className={`saved-button ${savedOnly ? "active" : ""}`}
-              onClick={() => {
-                setSavedOnly(!savedOnly);
-                if (tab === "Compare") setTab("Performance");
-              }}
-            >
-              <Heart size={17} /> <span>Saved</span>
-              {saved.length > 0 && <b>{saved.length}</b>}
-            </button>
-            <div className="menu-wrap">
-              <button
-                className="menu-button"
-                aria-label="Open menu"
-                aria-expanded={menu}
-                onClick={() => setMenu(!menu)}
-              >
-                <Menu size={21} />
-              </button>
-              {menu && (
-                <div className="dropdown">
-                  <a
-                    href="https://elite-wings.com/allaircraft/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Aircraft e-guide <ArrowUpRight size={16} />
-                  </a>
-                  <a
-                    href="https://elite-wings.com/bizjets-navigator/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Elite Wings navigator <ArrowUpRight size={16} />
-                  </a>
-                  <button
-                    onClick={() => {
-                      reset();
-                      setMenu(false);
-                      setTab("Performance");
-                    }}
-                  >
-                    <RotateCcw size={15} /> Reset browsing filters
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        {tab !== "Compare" && (
-          <div className="search-area">
-            <form
-              className="search-bar"
-              onSubmit={(e) => {
-                e.preventDefault();
-                document
-                  .getElementById("results")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              <label className="search-model">
-                <span>Find your aircraft</span>
-                <input
-                  aria-label="Search aircraft"
-                  placeholder="Search by model or brand"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-              <label>
-                <span>Manufacturer</span>
-                <select
-                  aria-label="Manufacturer"
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                >
-                  <option>All manufacturers</option>
-                  {[...new Set(jets.map((j) => j.manufacturers))]
-                    .sort()
-                    .map((m) => (
-                      <option key={m} value={m}>
-                        {maker(m)}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label>
-                <span>Range</span>
-                <select
-                  aria-label="Minimum range"
-                  value={minRange}
-                  onChange={(e) => setMinRange(Number(e.target.value))}
-                >
-                  <option value={0}>Any distance</option>
-                  {[1500, 3000, 5000, 7000].map((n) => (
-                    <option value={n} key={n}>
-                      {fmt(n)}+ nm
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="passenger-search">
-                <span>Passengers</span>
-                <select
-                  aria-label="Minimum passengers"
-                  value={passengers}
-                  onChange={(e) => setPassengers(Number(e.target.value))}
-                >
-                  <option value={0}>Any group size</option>
-                  {[4, 6, 8, 10, 12, 16].map((n) => (
-                    <option value={n} key={n}>
-                      {n}+ passengers
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button className="search-submit" aria-label="Search">
-                <Search size={22} />
-              </button>
-            </form>
-          </div>
-        )}
-      </header>
-      {tab !== "Compare" ? (
-        <>
-          <div className="category-bar">
-            <div className="categories">
-              {categories.map((c, i) => {
-                const Icon = categoryIcons[i];
-                return (
-                  <button
-                    className={cat === c ? "selected" : ""}
-                    key={c}
-                    onClick={() => setCat(c)}
-                  >
-                    <Icon size={23} strokeWidth={1.5} />
-                    <span>{c}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <button className="filter-button" onClick={() => setFilters(true)}>
-              <SlidersHorizontal size={17} />
-              Filters{(maxPrice < 100 || minSpeed > 0 || standup) && <i />}
-            </button>
-          </div>
-          <main id="results">
-            <div className="intro">
-              <div>
-                <div className="eyebrow">
-                  <span /> THE BUSINESS JET COLLECTION
-                </div>
-                <h1>
-                  {savedOnly
-                    ? "Your next chapter, saved."
-                    : tab === "Interior"
-                      ? "A different class of cabin."
-                      : "Find your extraordinary."}
-                </h1>
-                <p>
-                  {tab === "Interior"
-                    ? "Thoughtful spaces. Exceptional comfort. Discover life above the clouds."
-                    : "From your next connection to your next continent. Find the jet that takes you there."}
-                </p>
-              </div>
-              <div className="result-controls">
-                <span>{filtered.length} aircraft to explore</span>
-                <select
-                  aria-label="Sort aircraft"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                >
-                  {[
-                    "Recommended",
-                    "Range: longest first",
-                    "Price: low to high",
-                    "Speed: fastest first",
-                    "Cabin: largest first",
-                  ].map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {active && (
-              <div className="filter-summary">
-                <span>
-                  {savedOnly
-                    ? "Saved aircraft"
-                    : cat !== "All aircraft"
-                      ? cat
-                      : "Filtered collection"}{" "}
-                  · {filtered.length} results
-                </span>
-                <button onClick={reset}>
-                  Clear all <X size={13} />
-                </button>
-              </div>
-            )}
-            {filtered.length === 0 ? (
-              <div className="empty">
-                <Search size={36} />
-                <h2>
-                  {savedOnly
-                    ? "Your collection starts here."
-                    : "No aircraft match just yet."}
-                </h2>
-                <p>
-                  {savedOnly
-                    ? "Tap a heart on any aircraft to save it for later."
-                    : "Try a shorter range or a different passenger count."}
-                </p>
-                <button className="primary" onClick={reset}>
-                  Explore all aircraft <ArrowRight size={17} />
-                </button>
-              </div>
-            ) : active || sort !== "Recommended" ? (
-              <div className="jet-grid">
-                {sorted.map((j) => (
-                  <Card jet={j} key={j.id} />
-                ))}
-              </div>
-            ) : (
-              <>
-                <Shelf
-                  renderCard={(j) => <Card jet={j} key={j.id} />}
-                  title={
-                    tab === "Interior"
-                      ? "Room to make yourself at home"
-                      : "Go further. Arrive extraordinary."
-                  }
-                  sub={
-                    tab === "Interior"
-                      ? "Flagship cabins, designed around you."
-                      : "Long-range icons. A world of possibilities."
-                  }
-                  items={sorted.filter((j) => j.range >= 5000)}
-                />
-                <Shelf
-                  renderCard={(j) => <Card jet={j} key={j.id} />}
-                  title={
-                    tab === "Interior"
-                      ? "Your own space above it all"
-                      : "The sweet spot of business aviation"
-                  }
-                  sub={
-                    tab === "Interior"
-                      ? "Space to work, connect, and completely switch off."
-                      : "Impressive capability. Perfectly balanced."
-                  }
-                  items={sorted.filter(
-                    (j) => j.range < 5000 && j.range >= 2700,
-                  )}
-                />
-                <div className="editorial">
-                  <div className="editorial-icon">
-                    <Compass size={34} strokeWidth={1.2} />
-                  </div>
-                  <div>
-                    <span className="eyebrow">A CLEARER PERSPECTIVE</span>
-                    <h3>The right aircraft is in the details.</h3>
-                    <p>
-                      Bring your shortlist together. Compare performance, space,
-                      and possibility.
-                    </p>
-                  </div>
-                  <button onClick={() => setTab("Compare")}>
-                    Compare aircraft <ArrowUpRight size={19} />
-                  </button>
-                </div>
-                <Shelf
-                  renderCard={(j) => <Card jet={j} key={j.id} />}
-                  title={
-                    tab === "Interior"
-                      ? "Small aircraft. Considered comfort."
-                      : "Closer destinations. Bigger possibilities."
-                  }
-                  sub="Discover the light and very light jet collection."
-                  items={sorted.filter((j) => j.range < 2700)}
-                />
-              </>
-            )}
-          </main>
-        </>
-      ) : (
-        <main className="compare-main">
-          <div className="eyebrow">
-            <span /> YOUR AIRCRAFT, SIDE BY SIDE
-          </div>
-          <div className="compare-heading">
-            <div>
-              <h1>Make the right connection.</h1>
-              <p>
-                A closer look at what sets your shortlist apart. Compare up to
-                three aircraft.
-              </p>
-            </div>
-            {selected.length > 0 && (
-              <button className="text-button" onClick={() => setSelected([])}>
-                Clear comparison <RotateCcw size={15} />
-              </button>
-            )}
-          </div>
-          <div className="compare-picker">
-            {[0, 1, 2].map((i) => (
-              <label key={i}>
-                <span>Aircraft {String(i + 1).padStart(2, "0")}</span>
-                <select
+                <AppSelect
                   aria-label={`Comparison aircraft ${i + 1}`}
                   value={selected[i] || ""}
                   onChange={(e) => {
@@ -739,10 +302,589 @@ export default function Home() {
                         {maker(j.manufacturers)} {displayName(j.Model)}
                       </option>
                     ))}
-                </select>
-              </label>
+                </AppSelect>
+    );
+  }
+
+  function renderCard(j: Jet) {
+    return (
+      <TiltCard key={j.id}>
+        <div className="card-meta">
+          <span data-category={category(j)}>{category(j)}</span>
+          <Button
+            variant="ghost"
+            className={`save-jet ${saved.includes(j.id) ? "is-saved" : ""}`}
+            aria-label={`${saved.includes(j.id) ? "Unsave" : "Save"} ${j.Model}`}
+            aria-pressed={saved.includes(j.id)}
+            onClick={() => toggleSaved(j.id)}
+          >
+            <Heart
+              size={17}
+              fill={saved.includes(j.id) ? "currentColor" : "none"}
+            />
+          </Button>
+        </div>
+        <Button
+          variant="ghost"
+          className="photo-button dashboard-photo"
+          onClick={() => setDetail(j)}
+          aria-label={`Explore ${displayName(j.Model)}`}
+        >
+          <Photo
+            src={tab === "Interior" ? j.interiorImage : j.image}
+            alt={`${maker(j.manufacturers)} ${displayName(j.Model)} ${tab === "Interior" ? "cabin" : "exterior"}`}
+          />
+        </Button>
+        <div className="image-card-content">
+          <div className="card-title">
+            <div>
+              <p className="maker">{maker(j.manufacturers)}</p>
+              <Button
+                variant="ghost"
+                className="photo-model-pill"
+                onClick={() => setDetail(j)}
+              >
+                {displayName(j.Model)}
+              </Button>
+            </div>
+            <div className="price">
+              {price(j.base_price)}
+              <small>Base price · USD</small>
+            </div>
+          </div>
+          <div className="dashboard-specs">
+            {(tab === "Interior"
+              ? [
+                  [
+                    j.max_passengers ? fmt(j.max_passengers) : "—",
+                    "Max. passengers",
+                  ],
+                  [
+                    j.cabin_volume ? fmt(j.cabin_volume) + " ft³" : "—",
+                    "Cabin volume",
+                  ],
+                  [j.cabin_height_text || "—", "Cabin height"],
+                ]
+              : [
+                  [fmt(j.range) + " nm", "Maximum range"],
+                  [
+                    j.high_speed_cruise
+                      ? fmt(j.high_speed_cruise) + " ktas"
+                      : "—",
+                    "High-speed cruise",
+                  ],
+                  [
+                    j.max_passengers ? fmt(j.max_passengers) : "—",
+                    "Max. passengers",
+                  ],
+                ]
+            ).map(([v, label]) => (
+              <div key={label}>
+                <strong>{v}</strong>
+                <span>{label}</span>
+              </div>
             ))}
           </div>
+          <div className="card-actions">
+            <Button
+              variant="ghost"
+              className={selected.includes(j.id) ? "selected" : ""}
+              onClick={() => toggleCompare(j.id)}
+              aria-label={`${selected.includes(j.id) ? "Remove" : "Compare"} ${j.Model}`}
+            >
+              {selected.includes(j.id) ? (
+                <Check size={14} />
+              ) : (
+                <Plus size={14} />
+              )}{" "}
+              {selected.includes(j.id) ? "In comparison" : "Compare"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDetail(j)}
+              aria-label={`View ${j.Model} details`}
+            >
+              View details <ArrowUpRight size={14} />
+            </Button>
+          </div>
+        </div>
+      </TiltCard>
+    );
+  }
+
+  return (
+    <>
+      <div className="navigation-dock" data-surface="flat">
+        <GlassDock active={plannerOpen ? "Destination" : tab} onSelect={(key) => {
+          if (key === "Destination") { setPlannerOpen(true); setFilters(false); }
+          else { setPlannerOpen(false); changeTab(key as Tab); }
+        }} />
+      </div>
+      {tab !== "Compare" && <div className="floating-search" data-surface="flat"><Seek value={query} onChange={setQuery} /></div>}
+      {tab !== "Compare" ? (
+        <div className="dashboard-shell">
+          <Button
+              variant="ghost"
+              className={`sidebar-scrim ${filters ? "open" : ""}`}
+              tabIndex={-1}
+              aria-hidden={!filters}
+              aria-label="Close filter drawer"
+              onClick={() => setFilters(false)}
+            />
+          <aside
+            className={`filter-sidebar ${filters ? "open" : ""}`}
+            id="aircraft-filters"
+            inert={!filters}
+            aria-hidden={!filters}
+            aria-label="Aircraft filters"
+            role={filters ? "dialog" : undefined}
+            aria-modal={filters ? true : undefined}
+          >
+            <a className="sidebar-brand" href="/">ELITE WINGS</a>
+            <div className="sidebar-heading">
+              <h2>Filters</h2>
+              <Button
+                variant="ghost"
+                className="close-sidebar"
+                aria-label="Close filters"
+                onClick={() => setFilters(false)}
+              >
+                <X size={19} />
+              </Button>
+            </div>
+            <div className="filter-scroll-content">
+            <div className="sidebar-group">
+              <label className="filter-label" htmlFor="manufacturer">
+                Manufacturer
+              </label>
+              <AppSelect
+                id="manufacturer"
+                aria-label="Manufacturer"
+                value={manufacturer}
+                onChange={(e) => setManufacturer(e.target.value)}
+              >
+                <option>All manufacturers</option>
+                {[...new Set(jets.map((j) => j.manufacturers))]
+                  .sort()
+                  .map((m) => (
+                    <option key={m} value={m}>
+                      {maker(m)}
+                    </option>
+                  ))}
+              </AppSelect>
+            </div>
+            <fieldset className="sidebar-group aircraft-classes">
+              <legend>Aircraft class</legend>
+              {categories.map((c) => (
+                <label key={c}>
+                  <input
+                    type="radio"
+                    name="aircraft-category"
+                    aria-label={c}
+                    value={c}
+                    checked={cat === c}
+                    onChange={() => setCat(c)}
+                  />
+                  <span>{c}</span>
+                  <small>
+                    {c === "All aircraft"
+                      ? jets.length
+                      : jets.filter((j) => category(j) === c).length}
+                  </small>
+                </label>
+              ))}
+            </fieldset>
+            <div className="sidebar-group">
+              <div className="filter-label">
+                Base price <span>USD</span>
+              </div>
+              <PriceBars jets={jets} min={minPrice} max={maxPrice} active={filters} />
+              <label className="sr-only" htmlFor="price-range">
+                Maximum base price
+              </label>
+              <input
+                id="price-range"
+                className="sidebar-range"
+                type="range"
+                min={minPrice}
+                max="100"
+                step="1"
+                value={maxPrice}
+                style={{ background: `linear-gradient(to right, #18181b 0%, #18181b ${(minPrice === 100 ? 100 : ((maxPrice - minPrice) / (100 - minPrice)) * 100)}%, #dfe1e4 ${(minPrice === 100 ? 100 : ((maxPrice - minPrice) / (100 - minPrice)) * 100)}%, #dfe1e4 100%)` }}
+                onChange={(e) => setMaxPrice(Number(e.target.value))}
+              />
+              <div className="price-inputs">
+                <label>
+                  MIN{" "}
+                  <div>
+                    $
+                    <input
+                      aria-label="Minimum base price in millions"
+                      type="number"
+                      min="0"
+                      max={maxPrice}
+                      value={minPrice}
+                      onChange={(e) =>
+                        setMinPrice(
+                          Math.max(
+                            0,
+                            Math.min(maxPrice, Number(e.target.value)),
+                          ),
+                        )
+                      }
+                    />
+                    M
+                  </div>
+                </label>
+                <label>
+                  MAX{" "}
+                  <div>
+                    $
+                    <input
+                      aria-label="Maximum base price in millions"
+                      type="number"
+                      min={minPrice}
+                      max="100"
+                      value={maxPrice}
+                      onChange={(e) =>
+                        setMaxPrice(
+                          Math.max(
+                            minPrice,
+                            Math.min(100, Number(e.target.value)),
+                          ),
+                        )
+                      }
+                    />
+                    M
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div className="sidebar-group">
+              <label className="filter-label" htmlFor="range">
+                Minimum range{" "}
+                <strong>{minRange ? fmt(minRange) + " nm" : "Any"}</strong>
+              </label>
+              <RangeScrubber value={minRange} onChange={setMinRange} active={filters} />
+              <div className="range-endpoints">
+                <span>0 nm</span>
+                <span>8,000 nm</span>
+              </div>
+            </div>
+            <div className="sidebar-group">
+              <label className="filter-label" htmlFor="passengers">
+                Passengers
+              </label>
+              <AppSelect
+                id="passengers"
+                aria-label="Minimum passengers"
+                value={passengers}
+                onChange={(e) => setPassengers(Number(e.target.value))}
+              >
+                <option value="0">Any group size</option>
+                {[4, 6, 8, 10, 12, 16].map((n) => (
+                  <option key={n} value={n}>
+                    {n}+ passengers
+                  </option>
+                ))}
+              </AppSelect>
+            </div>
+            <details
+              className="sidebar-group advanced-filters"
+              open={tab === "Interior"}
+            >
+              <summary>
+                More specifications <Plus size={13} />
+              </summary>
+              <label className="filter-label" htmlFor="speed">
+                Minimum cruise{" "}
+                <strong>{minSpeed ? minSpeed + " ktas" : "Any"}</strong>
+              </label>
+              <CruiseSlider value={minSpeed} onChange={setMinSpeed} />
+              <label className="standup-check">
+                <input
+                  type="checkbox"
+                  checked={standup}
+                  onChange={(e) => setStandup(e.target.checked)}
+                />
+                <span>
+                  Stand-up cabin<small>At least 6 ft cabin height</small>
+                </span>
+              </label>
+            </details>
+            <div className="sidebar-note">
+              Specifications from the aircraft guide.
+              <br />
+              Prices and configurations may vary.
+            </div>
+            </div>
+            <div className="filter-drawer-footer">
+              <Button variant="ghost" className="filter-reset" onClick={reset}>Reset</Button>
+              <Button variant="ghost" className="filter-done" onClick={() => setFilters(false)}>Done</Button>
+            </div>
+          </aside>
+          <main id="results" className="dashboard-main">
+            <div className="dashboard-heading">
+              <div>
+                <div className="navigator-identity"><span className="navigator-wordmark">ELITE WINGS</span><span className="navigator-edition">Aircraft navigator</span></div>
+                <div className="navigator-title-row">
+                  <h1>{savedOnly ? "Your collection" : tab === "Interior" ? "Cabin interiors" : "Aircraft performance"}</h1>
+                  <span className="result-count" role="status">{filtered.length} aircraft</span>
+                </div>
+                <p className="navigator-purpose">{tab === "Interior" ? "Space to work. Room to unwind. Find your cabin." : "Find the reach, speed and capacity for your next journey."}</p>
+              </div>
+              <Button
+                variant="ghost"
+                className="floating-filter-button"
+                aria-label="Open filters"
+                title="Filters"
+                aria-expanded={filters}
+                aria-controls="aircraft-filters"
+                onClick={() => setFilters(true)}
+              >
+                <SlidersHorizontal size={28} strokeWidth={2} /><span className="control-caption">Filters</span>
+              </Button>
+              <div className="dashboard-tools">
+                <Button variant="ghost" className="saved-button" aria-label="Saved aircraft" aria-pressed={savedOnly} onClick={() => setSavedOnly(!savedOnly)}><Heart size={17} fill={savedOnly ? "currentColor" : "none"} /><span>Saved</span>{saved.length > 0 && <b>{saved.length}</b>}</Button>
+
+                <AppSelect
+                  aria-label="Sort aircraft"
+                  value={sort}
+                  onChange={(e) => {
+                    setSort(e.target.value);
+                  }}
+                >
+                  {[
+                    "Range: longest first",
+                    "Price: low to high",
+                    "Speed: fastest first",
+                    "Cabin: largest first",
+                  ].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </AppSelect>
+              </div>
+            </div>
+            {mission && (
+              <div className="dashboard-mission">
+                <Globe2 size={18} />
+                <div>
+                  <strong>
+                    {mission.from.city} <ArrowRight size={13} />{" "}
+                    {mission.to.city}
+                  </strong>
+                  <span>
+                    {fmt(mission.distance)} nm · {mission.passengers} passengers
+                    · Guide-based screen
+                  </span>
+                </div>
+                <Button variant="ghost" onClick={() => setPlannerOpen(true)}>
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  aria-label="Remove mission"
+                  onClick={() => setMission(null)}
+                >
+                  <X size={15} />
+                </Button>
+              </div>
+            )}
+            {active && (
+              <div className="active-filter-row">
+                {savedOnly && (
+                  <Button variant="ghost" onClick={() => setSavedOnly(false)}>
+                    Saved <X size={12} />
+                  </Button>
+                )}
+                {cat !== "All aircraft" && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCat("All aircraft")}
+                  >
+                    {cat} <X size={12} />
+                  </Button>
+                )}
+                {manufacturer !== "All manufacturers" && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setManufacturer("All manufacturers")}
+                  >
+                    {maker(manufacturer)} <X size={12} />
+                  </Button>
+                )}
+                {(minPrice > 0 || maxPrice < 100) && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setMinPrice(0);
+                      setMaxPrice(100);
+                    }}
+                  >
+                    ${minPrice}–{maxPrice}M <X size={12} />
+                  </Button>
+                )}
+                {minRange > 0 && (
+                  <Button variant="ghost" onClick={() => setMinRange(0)}>
+                    {fmt(minRange)}+ nm <X size={12} />
+                  </Button>
+                )}
+                {passengers > 0 && (
+                  <Button variant="ghost" onClick={() => setPassengers(0)}>
+                    {passengers}+ passengers <X size={12} />
+                  </Button>
+                )}
+                {minSpeed > 0 && (
+                  <Button variant="ghost" onClick={() => setMinSpeed(0)}>
+                    {minSpeed}+ ktas <X size={12} />
+                  </Button>
+                )}
+                {standup && (
+                  <Button variant="ghost" onClick={() => setStandup(false)}>
+                    Stand-up cabin <X size={12} />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className="clear-active"
+                  onClick={reset}
+                >
+                  Clear all
+                </Button>
+              </div>
+            )}
+            {filtered.length === 0 ? (
+              <div className="empty">
+                <Search size={30} />
+                <h2>
+                  {savedOnly && saved.length === 0 ? "No saved aircraft yet" : "No matching aircraft"}
+                </h2>
+                <p>
+                  {savedOnly && saved.length === 0
+                    ? "Save an aircraft using the heart icon."
+                    : "Adjust your filters to explore more aircraft."}
+                </p>
+                <Button variant="ghost" className="primary" onClick={reset}>
+                  Reset filters <RotateCcw size={14} />
+                </Button>
+              </div>
+            ) : (
+              <div className="jet-grid">
+                {sorted.map(renderCard)}
+              </div>
+            )}
+            <div className="dashboard-end">
+              <span>
+                {filtered.length} aircraft ·{" "}
+                {tab === "Interior"
+                  ? "Cabin specifications"
+                  : "Performance specifications"}
+              </span>
+              <span>Guide base prices in USD</span>
+            </div>
+          <SourceFooter />
+          </main>
+        </div>
+      ) : (
+        <main className="compare-main">
+          <div className="navigator-identity"><span className="navigator-wordmark">ELITE WINGS</span><span className="navigator-edition">Aircraft navigator</span></div>
+          <div className="compare-heading">
+            <div>
+              <h1>Compare aircraft</h1>
+              <p>
+                Your shortlist, side by side.
+              </p>
+            </div>
+            {selected.length > 0 && (
+              <Button
+                variant="ghost"
+                className="text-button"
+                onClick={() => setSelected([])}
+              >
+                Clear comparison <RotateCcw size={15} />
+              </Button>
+            )}
+          </div>
+          {comparison.length > 0 && (
+            <div className="compare-toolbar">
+              <div className="segmented" role="group" aria-label="Comparison photography">
+                <Button
+                  variant="ghost"
+                  className={!compareCabin ? "active" : ""}
+                  aria-pressed={!compareCabin}
+                  onClick={() => setCompareCabin(false)}
+                >
+                  Exterior
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={compareCabin ? "active" : ""}
+                  aria-pressed={compareCabin}
+                  onClick={() => setCompareCabin(true)}
+                >
+                  Cabin
+                </Button>
+              </div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={differencesOnly}
+                  disabled={comparison.length < 2}
+                  onChange={(e) => setDifferencesOnly(e.target.checked)}
+                />{" "}
+                Differences only
+              </label>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  const keys = [
+                    "Model",
+                    "manufacturers",
+                    "range",
+                    "high_speed_cruise",
+                    "max_passengers",
+                    "cabin_volume",
+                    "base_price",
+                  ] as const;
+                  const csv = [
+                    "Model,Manufacturer,Range (nm),High-speed cruise (ktas),Maximum passengers,Cabin volume (ft3),Guide base price (USD)",
+                    ...comparison.map((j) =>
+                      keys
+                        .map(
+                          (k) =>
+                            '"' +
+                            String(j[k] ?? "Not provided").replaceAll(
+                              '"',
+                              '""',
+                            ) +
+                            '"',
+                        )
+                        .join(","),
+                    ),
+                  ].join("\n");
+                  const url = URL.createObjectURL(
+                    new Blob([csv], { type: "text/csv" }),
+                  );
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "elite-wings-shortlist.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setToast("Your shortlist has been exported.");
+                }}
+              >
+                Export shortlist <ArrowUpRight size={15} />
+              </Button>
+            </div>
+          )}
+          {comparison.length === 0 && <div className="compare-picker">
+            {[0, 1, 2].map(i => <div className="compare-empty-slot" key={i}>
+              <span className="compare-slot-label">Aircraft {String(i + 1).padStart(2, "0")}</span>
+              {comparisonPicker(i)}
+            </div>)}
+          </div>}
           {comparison.length === 0 ? (
             <div className="empty compare-empty">
               <Columns3 size={45} strokeWidth={1.2} />
@@ -751,239 +893,122 @@ export default function Home() {
                 Select aircraft above, or add them as you explore the
                 collection.
               </p>
-              <button className="primary" onClick={() => setTab("Performance")}>
+              <Button
+                variant="ghost"
+                className="primary"
+                onClick={() => setTab("Performance")}
+              >
                 Explore the collection <ArrowRight size={17} />
-              </button>
+              </Button>
             </div>
           ) : (
-            <div className="comparison-scroll">
-              <table className="comparison-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <span className="eyebrow">THE SHORTLIST</span>
-                      <p>{comparison.length} of 3 aircraft</p>
-                    </th>
-                    {comparison.map((j) => (
-                      <th key={j.id}>
-                        <div className="compare-photo">
-                          <Photo src={j.image} alt={j.Model} />
-                          <button
-                            aria-label={`Remove ${j.Model}`}
-                            onClick={() => toggleCompare(j.id)}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <p className="maker">{maker(j.manufacturers)}</p>
-                        <h2>{displayName(j.Model)}</h2>
+            <>
+              <p className="compare-scroll-hint">Scroll sideways to compare all aircraft <ArrowRight size={13}/></p>
+              <div className="comparison-scroll" role="region" aria-label="Scrollable aircraft comparison" tabIndex={0}>
+                <table className="comparison-table" aria-label="Aircraft specifications comparison">
+                  <thead>
+                    <tr>
+                      <th>
+                        <span className="compare-table-label">Your shortlist</span>
+                        <p>{comparison.length} of 3 aircraft</p>
                       </th>
+                      {[0, 1, 2].map(i => {
+                        const j = comparison[i];
+                        return <th key={i} scope="col" className="compare-aircraft-column">
+                          <div className="compare-slot-label">Aircraft {String(i + 1).padStart(2, "0")}</div>
+                          {comparisonPicker(i)}
+                          {j ? <div className="compare-photo">
+                            <Photo src={compareCabin ? j.interiorImage : j.image} alt={`${displayName(j.Model)} ${compareCabin ? "cabin" : "exterior"}`} />
+                            <Button variant="ghost" aria-label={`Remove ${j.Model}`} onClick={() => toggleCompare(j.id)}><X size={16}/></Button>
+                            <span className="compare-category">{category(j)}</span>
+                          </div> : <div className="compare-photo compare-vacant"><Plus size={22} strokeWidth={1.5}/><span>Add an aircraft above</span></div>}
+                        </th>;
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      [
+                        "Overview",
+                        [
+                          ["Category", "business_jet_category", ""],
+                          ["Guide base price", "base_price", ""],
+                          ["Guide model year", "model_year", ""],
+                        ],
+                      ],
+                      [
+                        "Performance",
+                        [
+                          ["Maximum range", "range", "nm"],
+                          ["High-speed cruise", "high_speed_cruise", "ktas"],
+                          ["Long-range cruise", "long_range_cruise", "ktas"],
+                          ["Takeoff distance", "takeoff_distance", "ft"],
+                          ["Landing distance", "landing_distance", "ft"],
+                          ["Maximum altitude", "maximum_cruise_altitude", "ft"],
+                        ],
+                      ],
+                      [
+                        "Interior",
+                        [
+                          ["Maximum passengers", "max_passengers", ""],
+                          ["Cabin volume", "cabin_volume", "ft³"],
+                          ["Cabin height", "cabin_height_text", ""],
+                          ["Cabin width", "cabin_width_text", ""],
+                          ["Cabin length", "cabin_lenght_text", ""],
+                          ["Total baggage", "total_baggage", "ft³"],
+                        ],
+                      ],
+                      [
+                        "Flight deck & power",
+                        [
+                          ["Pilots", "pilots", ""],
+                          ["Avionics", "avionics_model", ""],
+                          ["Engine", "engine_model", ""],
+                        ],
+                      ],
+                    ].map(([section, fields]) => (
+                      <CompareRows
+                        key={String(section)}
+                        section={String(section)}
+                        fields={fields as string[][]}
+                        items={comparison}
+                        differencesOnly={differencesOnly}
+                      />
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    [
-                      "Overview",
-                      [
-                        ["Category", "business_jet_category", ""],
-                        ["Base price", "base_price", ""],
-                        ["Model year", "model_year", ""],
-                      ],
-                    ],
-                    [
-                      "Performance",
-                      [
-                        ["Maximum range", "range", "nm"],
-                        ["High-speed cruise", "high_speed_cruise", "ktas"],
-                        ["Long-range cruise", "long_range_cruise", "ktas"],
-                        ["Takeoff distance", "takeoff_distance", "ft"],
-                        ["Landing distance", "landing_distance", "ft"],
-                        ["Maximum altitude", "maximum_cruise_altitude", "ft"],
-                      ],
-                    ],
-                    [
-                      "Interior",
-                      [
-                        ["Maximum passengers", "max_passengers", ""],
-                        ["Cabin volume", "cabin_volume", "ft³"],
-                        ["Cabin height", "cabin_height_text", ""],
-                        ["Cabin width", "cabin_width_text", ""],
-                        ["Cabin length", "cabin_lenght_text", ""],
-                        ["Total baggage", "total_baggage", "ft³"],
-                      ],
-                    ],
-                    [
-                      "Flight deck & power",
-                      [
-                        ["Pilots", "pilots", ""],
-                        ["Avionics", "avionics_model", ""],
-                        ["Engine", "engine_model", ""],
-                      ],
-                    ],
-                  ].map(([section, fields]) => (
-                    <CompareRows
-                      key={String(section)}
-                      section={String(section)}
-                      fields={fields as string[][]}
-                      items={comparison}
-                    />
-                  ))}
-                  <tr className="notes-row">
-                    <th>Range conditions</th>
-                    {comparison.map((j) => (
-                      <td key={j.id}>
-                        {j.max_range_condition || "Not provided"}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </main>
-      )}
-      <footer>
-        <div className="footer-brand">
-          ELITE WINGS <span>Perspective for your next horizon.</span>
-        </div>
-        <p>
-          Specifications from the supplied aircraft guide · Base prices in USD ·
-          Imagery © respective owners via{" "}
-          <a
-            href="https://elite-wings.com/allaircraft/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Elite Wings <ArrowUpRight size={11} />
-          </a>
-        </p>
-        <span>
-          Guide values may differ from current configurations. Model-family
-          imagery is illustrative.
-        </span>
-      </footer>
-      {selected.length > 0 && tab !== "Compare" && (
-        <div className="compare-tray">
-          <div className="tray-title">
-            <Columns3 size={20} />
-            <strong>Your shortlist</strong>
-            <span>{selected.length}/3</span>
-          </div>
-          <div className="tray-jets">
-            {comparison.map((j) => (
-              <button
-                key={j.id}
-                onClick={() => toggleCompare(j.id)}
-                title={`Remove ${j.Model}`}
-              >
-                <Photo src={j.image} alt="" />
-                <span>{displayName(j.Model)}</span>
-                <X size={13} />
-              </button>
-            ))}
-          </div>
-          <button className="primary" onClick={() => setTab("Compare")}>
-            Compare aircraft <ArrowRight size={17} />
-          </button>
-          <button
-            className="tray-clear"
-            aria-label="Clear shortlist"
-            onClick={() => setSelected([])}
-          >
-            <X size={18} />
-          </button>
-        </div>
-      )}
-      {filters && (
-        <div className="modal-backdrop" onClick={() => setFilters(false)}>
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-label="Filter aircraft"
-            className="filter-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-heading">
-              <h2>Refine your flight</h2>
-              <button
-                autoFocus
-                aria-label="Close filters"
-                onClick={() => setFilters(false)}
-              >
-                <X />
-              </button>
-            </div>
-            <p>Find the aircraft that fits your mission.</p>
-            <label className="range-filter">
-              Maximum base price <strong>${maxPrice}M</strong>
-              <input
-                type="range"
-                min="5"
-                max="100"
-                step="5"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(Number(e.target.value))}
-              />
-              <span>
-                $5M<span>$100M</span>
-              </span>
-            </label>
-            <label className="range-filter">
-              Minimum high-speed cruise{" "}
-              <strong>{minSpeed ? `${minSpeed} ktas` : "Any speed"}</strong>
-              <input
-                type="range"
-                min="0"
-                max="500"
-                step="50"
-                value={minSpeed}
-                onChange={(e) => setMinSpeed(Number(e.target.value))}
-              />
-            </label>
-            <label className="mobile-passengers">
-              Minimum passengers
-              <select
-                aria-label="Filter minimum passengers"
-                value={passengers}
-                onChange={(e) => setPassengers(Number(e.target.value))}
-              >
-                <option value={0}>Any group size</option>
-                {[4, 6, 8, 10, 12, 16].map((n) => (
-                  <option key={n} value={n}>
-                    {n}+ passengers
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="check-filter">
-              <div>
-                <strong>Stand-up cabin</strong>
-                <p>Cabin height of at least 6 ft</p>
+                    <tr className="notes-row">
+                      <th scope="row">Range conditions</th>
+                      {comparison.map((j) => (
+                        <td key={j.id}>
+                          {j.max_range_condition || "Not provided"}
+                        </td>
+                      ))}
+                      {Array.from({length:3-comparison.length}, (_, i) => <td key={`empty-${i}`} aria-label="No aircraft selected">—</td>)}
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <input
-                type="checkbox"
-                checked={standup}
-                onChange={(e) => setStandup(e.target.checked)}
-              />
-            </label>
-            <div className="modal-footer">
-              <button
-                className="text-button"
-                onClick={() => {
-                  setMaxPrice(100);
-                  setMinSpeed(0);
-                  setStandup(false);
-                }}
-              >
-                Reset filters
-              </button>
-              <button className="primary" onClick={() => setFilters(false)}>
-                Show {filtered.length} aircraft <ArrowRight size={16} />
-              </button>
-            </div>
-          </section>
-        </div>
+            </>
+          )}
+        <SourceFooter />
+          </main>
+      )}
+      {plannerOpen && (
+        <MissionPlanner
+          current={mission}
+          onClose={() => setPlannerOpen(false)}
+          onApply={(m) => {
+            reset();
+            setMission(m);
+            setSort("Price: low to high");
+            setTab("Performance");
+            setPlannerOpen(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
+
+      {selected.length > 0 && tab !== "Compare" && (
+        <ShortlistStack items={comparison.map(j=>({id:j.id,name:displayName(j.Model),maker:maker(j.manufacturers)}))} onRemove={toggleCompare} onCompare={()=>setTab("Compare")} />
       )}
       {detail && (
         <div className="modal-backdrop" onClick={() => setDetail(null)}>
@@ -994,14 +1019,15 @@ export default function Home() {
             className="detail-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <Button
+              variant="ghost"
               autoFocus
               className="detail-close"
               aria-label="Close aircraft details"
               onClick={() => setDetail(null)}
             >
               <X size={21} />
-            </button>
+            </Button>
             <div className="detail-images">
               <Photo
                 src={tab === "Interior" ? detail.interiorImage : detail.image}
@@ -1049,9 +1075,7 @@ export default function Home() {
                 })}
               </div>
               <h3>
-                {tab === "Interior"
-                  ? "Life on board"
-                  : "Designed for your next horizon"}
+                {tab === "Interior" ? "Life on board" : "Aircraft overview"}
               </h3>
               <p className="description">
                 {String(
@@ -1084,7 +1108,8 @@ export default function Home() {
                 configuration.
               </p>
               <div className="modal-footer">
-                <button
+                <Button
+                  variant="ghost"
                   className="text-button"
                   onClick={() => toggleSaved(detail.id)}
                 >
@@ -1095,8 +1120,9 @@ export default function Home() {
                   {saved.includes(detail.id)
                     ? "Saved to collection"
                     : "Save aircraft"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className="primary"
                   onClick={() => toggleCompare(detail.id)}
                 >
@@ -1108,7 +1134,7 @@ export default function Home() {
                   {selected.includes(detail.id)
                     ? "Added to comparison"
                     : "Add to comparison"}
-                </button>
+                </Button>
               </div>
             </div>
           </section>
@@ -1126,31 +1152,82 @@ function CompareRows({
   section,
   fields,
   items,
+  differencesOnly = false,
 }: {
+  differencesOnly?: boolean;
   section: string;
   fields: string[][];
   items: Jet[];
 }) {
+  const visibleFields = fields
+        .filter(
+          ([, key]) =>
+            !differencesOnly ||
+            items.length < 2 ||
+            new Set(
+              items.map((j) => {
+                const dimensionKeys: Record<string, string> = {
+                  cabin_height_text: "cabin_height",
+                  cabin_width_text: "cabin_width",
+                  cabin_lenght_text: "cabin_length",
+                };
+                const v = key === "business_jet_category" ? category(j) : j[(dimensionKeys[key] || key) as keyof Jet];
+                return typeof v === "string"
+                  ? v.trim().replace(/\s+/g, " ").toLowerCase()
+                  : v;
+              }),
+            ).size > 1,
+        );
+  if (visibleFields.length === 0) return null;
   return (
     <>
       <tr className="table-section">
-        <th colSpan={items.length + 1}>{section}</th>
+        <th colSpan={4}>{section}</th>
       </tr>
-      {fields.map(([label, key, unit]) => (
-        <tr key={key}>
-          <th>{label}</th>
-          {items.map((j) => (
-            <td key={j.id}>
-              {key === "base_price"
-                ? j.base_price
-                  ? `$${fmt(j.base_price)}`
-                  : "Not provided"
-                : fmt(j[key as keyof Jet])}
-              {j[key as keyof Jet] != null && unit && <small> {unit}</small>}
-            </td>
-          ))}
-        </tr>
-      ))}
+      {visibleFields
+        .map(([label, key, unit]) => (
+          <tr key={key}>
+            <th scope="row">{label}</th>
+            {items.map((j) => (
+              <td key={j.id}>
+                {key === "base_price"
+                  ? (j.base_price == null ? "Not provided" : j.base_price.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }))
+                  : key === "business_jet_category"
+                    ? category(j)
+                  : key === "model_year"
+                    ? String(j[key as keyof Jet] ?? "Not provided")
+                    : fmt(j[key as keyof Jet])}
+                {j[key as keyof Jet] != null && unit && <small> {unit}</small>}
+              </td>
+            ))}
+            {Array.from({length:3-items.length}, (_, i) => <td key={`empty-${i}`} aria-label="No aircraft selected">—</td>)}
+          </tr>
+        ))}
     </>
+  );
+}
+
+function SourceFooter() {
+  return (
+      <footer>
+        <div className="footer-brand">
+          ELITE WINGS <span>Business jet navigator.</span>
+        </div>
+        <p>
+          Specifications from the supplied aircraft guide · Base prices in USD ·
+          Imagery © respective owners via{" "}
+          <a
+            href="https://elite-wings.com/allaircraft/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Elite Wings <ArrowUpRight size={11} />
+          </a>
+        </p>
+        <span>
+          Guide values may differ from current configurations. Model-family
+          imagery is illustrative.
+        </span>
+      </footer>
   );
 }

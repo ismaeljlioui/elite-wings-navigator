@@ -1,0 +1,22 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@theme inline {
+ --color-background: #fff;
+ --color-foreground: #18181b;
+ --color-primary: #18181b;
+ --color-primary-foreground: #fff;
+ --color-secondary: #f4f4f5;
+ --color-secondary-foreground: #18181b;
+ --color-accent: #f4f4f5;
+ --color-popover: #fff;
+ --color-input: #e4e4e7;
+ --color-ring: #a1a1aa;
+ --color-muted-foreground: #71717a;
+ --radius-lg: .5rem;
+ --radius-md: .375rem;
+}
+body {isolation:isolate;}
+[data-slot=button]:focus-visible {outline:2px solid #a1a1aa;outline-offset:3px;}
+.photo-button[data-slot=button] {height:auto;padding:0;display:block;border:0;}
+.dashboard-search [data-slot=input] {box-shadow:none;border:0;background:transparent;width:100%;}

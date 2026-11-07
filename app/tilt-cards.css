@@ -1,0 +1,233 @@
+/* Slab geometry from the supplied CardSwap reference. */
+.tilt-frame {
+  perspective: 1000px;
+  min-width: 0;
+  position: relative;
+}
+.tilt-frame:hover {
+  z-index: 2;
+}
+.tilt-frame .jet-card,
+.tilt-frame .jet-card:hover {
+  position: relative;
+  height: 100%;
+  min-height: 420px;
+  aspect-ratio: 196/246;
+  padding: 3px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  color: #17181a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #17181a 12%, transparent);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  backface-visibility: hidden;
+  overflow: hidden;
+  transition: none;
+}
+.tilt-frame .dashboard-photo[data-slot="button"] {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  padding: 0;
+  aspect-ratio: auto;
+  border-radius: 17px;
+  overflow: hidden;
+}
+.tilt-frame .dashboard-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 17px;
+  pointer-events: none;
+  transform: none;
+  transition: none;
+}
+.tilt-frame .dashboard-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 17px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 13, 23, 0.12) 0%,
+    transparent 27%,
+    rgba(5, 13, 23, 0.2) 44%,
+    rgba(5, 13, 23, 0.78) 70%,
+    rgba(5, 13, 23, 0.94) 100%
+  );
+}
+.tilt-frame .card-meta {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  z-index: 3;
+  padding: 0;
+  background: none;
+  color: #fff;
+  pointer-events: none;
+}
+.tilt-frame .card-meta > span {
+  background: #101b2a65;
+  backdrop-filter: blur(12px);
+  padding: 6px 10px;
+  border: 1px solid #ffffff30;
+  border-radius: 999px;
+  font-size: 10px;
+}
+.tilt-frame .card-meta button {
+  pointer-events: auto;
+  background: #fff;
+  color: #17181a;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+}
+.image-card-content {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 14px;
+  z-index: 2;
+  color: #fff;
+  pointer-events: none;
+}
+.image-card-content button {
+  pointer-events: auto;
+}
+.dashboard-shell .tilt-frame .card-title {
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.tilt-frame .maker {
+  color: #ffffffc9;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin: 0 0 8px;
+}
+.dashboard-shell .tilt-frame .photo-model-pill {
+  position: static;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: 0;
+  height: auto;
+  white-space: normal;
+  max-width: 100%;
+  text-align: left;
+}
+.dashboard-shell .tilt-frame .card-title .price {
+  color: white;
+  font-size: 14px;
+  margin: 0;
+  text-align: right;
+}
+.dashboard-shell .tilt-frame .card-title .price small {
+  color: #ffffffb8;
+  font-size: 8px;
+  display: block;
+  margin: 5px 0 0;
+  text-align: right;
+}
+.tilt-frame .dashboard-specs {
+  margin: 20px 0 0;
+  padding: 0 0 17px;
+  gap: 8px;
+}
+.tilt-frame .dashboard-specs strong {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tilt-frame .dashboard-specs span {
+  color: #ffffffc7;
+  font-size: 9px;
+  margin-top: 5px;
+}
+.tilt-frame .card-actions {
+  padding: 9px 0 0;
+  border-top: 1px solid #ffffff30;
+  gap: 8px;
+}
+.tilt-frame .card-actions button,
+.tilt-frame .card-actions button:first-child {
+  color: #fff;
+  font-size: 10px;
+}
+.tilt-frame .card-actions button:hover {
+  background: #ffffff18;
+}
+@media (max-width: 640px) {
+  .tilt-frame .jet-card {
+    min-height: 430px;
+  }
+  .tilt-frame .dashboard-specs strong {
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tilt-frame .jet-card,
+  .tilt-frame .jet-card:hover {
+    transform: none;
+    transition: none;
+  }
+}
+.tilt-frame .jet-card,.tilt-frame .jet-card:hover {width:100%;aspect-ratio:auto;height:clamp(420px,34vw,510px);}
+
+/* Wider compositions keep the whole aircraft visible. */
+.dashboard-shell .jet-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;}
+.tilt-frame .jet-card,.tilt-frame .jet-card:hover {min-height:380px;height:clamp(380px,29vw,440px);}
+.tilt-frame .dashboard-photo[data-slot="button"] {background:#13191f;}
+.tilt-frame .dashboard-photo img:not(.card-ambient) {position:absolute;inset:0;width:100%;height:74%;object-fit:contain;object-position:center center;border-radius:0;}
+.tilt-frame .dashboard-photo img.card-ambient {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(24px) brightness(.7);transform:scale(1.15);opacity:.65;}
+.tilt-frame .dashboard-photo::after {background:linear-gradient(180deg,rgba(8,12,17,.05) 0%,transparent 38%,rgba(8,12,17,.25) 54%,rgba(8,12,17,.88) 73%,#080c11 100%);}
+.image-card-content {left:22px;right:22px;bottom:17px;}
+.dashboard-shell .tilt-frame .photo-model-pill {padding:7px 14px;font-size:15px;font-weight:550;}
+.tilt-frame .dashboard-specs {margin-top:16px;padding-bottom:12px;}
+.tilt-frame .dashboard-specs strong {font-size:13px;}
+.tilt-frame .dashboard-specs span {font-size:10px;}
+.tilt-frame .card-actions {padding-top:7px;}
+.tilt-frame .card-actions button {font-size:11px;}
+.topbar nav {align-items:center;}
+.topbar nav button {height:100%;}
+@media(min-width:1700px){.dashboard-shell .jet-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:1050px){.dashboard-shell .jet-grid{grid-template-columns:1fr;}.tilt-frame .jet-card,.tilt-frame .jet-card:hover{height:410px;}}
+@media(max-width:640px){.tilt-frame .jet-card,.tilt-frame .jet-card:hover{height:390px;min-height:390px;}.image-card-content{left:18px;right:18px;}}
+
+/* Full bleed photo: no contain letterboxing or non-image side bands. */
+.tilt-frame .dashboard-photo img:not(.card-ambient) {
+  height:100%;object-fit:cover;object-position:center center;border-radius:17px;
+}
+.tilt-frame .dashboard-photo img.card-ambient {display:none;}
+.tilt-frame .jet-card,.tilt-frame .jet-card:hover {
+  height:auto;min-height:0;aspect-ratio:1.5;
+}
+@media(max-width:640px){
+ .tilt-frame .jet-card,.tilt-frame .jet-card:hover {aspect-ratio:1.05;min-height:350px;}
+ .tilt-frame .dashboard-photo img:not(.card-ambient){object-position:center center;}
+}
+/* Readable identity and specification hierarchy on every image. */
+.image-card-content {left:22px;right:22px;bottom:18px;}
+.dashboard-shell .tilt-frame .card-title {align-items:flex-end;flex-wrap:wrap;gap:12px 18px;}
+.dashboard-shell .tilt-frame .card-title>div:first-child {min-width:0;flex:1 1 180px;}
+.tilt-frame .maker {color:#fff;font-size:11px;line-height:1.5;font-weight:600;letter-spacing:1.1px;margin:0 0 9px;text-shadow:0 1px 5px #0009;white-space:normal;}
+.dashboard-shell .tilt-frame .photo-model-pill {font-size:16px;line-height:1.35;padding:8px 14px;white-space:normal;text-align:left;}
+.dashboard-shell .tilt-frame .card-title .price {font-size:17px;line-height:1.3;flex:0 0 auto;}
+.dashboard-shell .tilt-frame .card-title .price small {font-size:10px;line-height:1.5;color:#e4e4e7;}
+.tilt-frame .dashboard-specs {margin-top:18px;gap:12px;padding-bottom:14px;}
+.tilt-frame .dashboard-specs strong {font-size:14px;line-height:1.4;white-space:normal;}
+.tilt-frame .dashboard-specs span {font-size:11px;line-height:1.45;color:#e4e4e7;}
+.tilt-frame .card-actions button,.tilt-frame .card-actions button:first-child {font-size:12px;min-height:30px;}
+.tilt-frame .dashboard-photo::after {background:linear-gradient(180deg,rgba(8,12,17,.04) 0%,transparent 25%,rgba(8,12,17,.38) 45%,rgba(8,12,17,.9) 65%,#080c11 100%);}
+.tilt-frame .jet-card,.tilt-frame .jet-card:hover {min-height:380px;}
+@media(max-width:640px){.image-card-content{left:18px;right:18px;}.tilt-frame .jet-card,.tilt-frame .jet-card:hover{min-height:410px;}.dashboard-shell .tilt-frame .card-title>div:first-child{flex-basis:150px;}.tilt-frame .dashboard-specs{gap:8px;}.tilt-frame .dashboard-specs span{font-size:10px;}}

@@ -1,0 +1,93 @@
+/* Shared rhythm and restrained interaction motion. */
+:root{--ease-out:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.2,.8,.2,1.12);}
+button,a,input,select{ -webkit-tap-highlight-color:transparent; }
+button{transition:background-color 160ms ease,color 160ms ease,box-shadow 160ms ease,scale 220ms var(--ease-spring);}
+button:active:not(:disabled):not(.dashboard-photo){scale:.97;}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #737373;outline-offset:4px;}
+.image-card-content button:focus-visible,.card-meta button:focus-visible{outline-color:white;}
+.dashboard-heading{align-items:center;}
+.dashboard-search{height:44px;padding:0 12px;gap:10px;min-width:0;transition:border-color 160ms ease,box-shadow 160ms ease;}
+.dashboard-search:focus-within{border-color:#a1a1aa;box-shadow:0 0 0 3px #18181b08;}
+.dashboard-search input[data-slot="input"]{height:100%;min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;outline:none;font-size:12px;}
+.dashboard-search svg{flex-shrink:0;}
+.dashboard-tools{min-width:0;}
+.dashboard-tools select{min-height:44px;}
+.price-inputs{grid-template-columns:repeat(2,minmax(0,1fr));}
+.price-inputs>label{min-width:0;flex-wrap:wrap;gap:5px;padding:10px;}
+.price-inputs>label>div{margin-left:auto;}
+.filter-label,.aircraft-classes legend{color:#66666f;}
+.range-endpoints,.aircraft-classes small{color:#777780;}
+.dashboard-shell .tilt-frame .card-title{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;}
+.dashboard-shell .tilt-frame .card-title>div:first-child{min-width:0;}
+.dashboard-shell .tilt-frame .photo-model-pill{min-height:38px;max-width:100%;overflow-wrap:anywhere;}
+.dashboard-shell .tilt-frame .card-title .price small{display:block;margin:5px 0 0;text-align:right;}
+.tilt-frame .dashboard-specs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:18px 0 0;padding:0 0 14px;gap:12px;}
+.tilt-frame .dashboard-specs>div{min-width:0;}
+.tilt-frame .dashboard-specs span{min-height:32px;}
+.tilt-frame .card-actions{padding:8px 0 0;display:flex;justify-content:space-between;}
+.tilt-frame .card-actions button{padding:4px 0;min-height:36px;gap:6px;}
+.tilt-frame .card-actions button:hover{background:transparent;color:#dedee4;}
+.tilt-frame .card-actions button svg{transition:transform 240ms var(--ease-out);}
+.tilt-frame .card-actions button:last-child:hover svg{transform:translate(2px,-2px);}
+.tilt-frame .card-meta button{width:36px;height:36px;}
+.tilt-frame .card-meta button.is-saved{color:#18181b;background:#fff;}
+.tilt-frame .dashboard-photo .image-fallback{position:absolute;inset:0;background:#30343a;color:#fff;justify-content:flex-start;padding-top:60px;}
+.topbar nav button:after{transition:opacity 180ms ease,transform 250ms var(--ease-out);}
+.detail-modal{animation:panel-in 380ms var(--ease-out);}
+.menu-popover,.toast,.empty{animation:surface-in 220ms var(--ease-out);}
+.compare-tray{animation:tray-in 320ms var(--ease-spring);}
+@keyframes panel-in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes surface-in{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+@keyframes tray-in{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+/* Opening a detail panel must not reflow the browsing grid behind it. */
+@media(min-width:1180px){body:has(.detail-modal) .dashboard-shell,body:has(.detail-modal) .compare-main{margin-right:0;}.modal-backdrop:has(.detail-modal){width:100%;left:0;background:#18181b35;backdrop-filter:blur(2px);}body:has(.detail-modal) .jet-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(min-width:1700px){body:has(.detail-modal) .jet-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:640px){
+.dashboard-tools{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;}
+.dashboard-tools select{justify-self:end;max-width:none;min-height:32px;}
+.dashboard-search{width:100%;}
+.dashboard-shell .jet-grid{gap:20px;}
+.dashboard-shell .tilt-frame .card-title{gap:10px;}
+.dashboard-shell .tilt-frame .photo-model-pill{font-size:15px;padding:8px 12px;}
+.dashboard-shell .tilt-frame .card-title .price{font-size:16px;}
+.tilt-frame .dashboard-specs{gap:8px;}
+.tilt-frame .dashboard-specs strong{font-size:13px;}
+.filter-sidebar.open{animation:panel-in 280ms var(--ease-out);}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}button:active{scale:1!important;}}
+.dashboard-search [data-slot="input-control"]{display:flex;align-items:center;flex:1;min-width:0;height:100%;border:0;border-radius:0;background:transparent;box-shadow:none;}
+.dashboard-search [data-slot="input-control"]::before{display:none;}
+
+/* Aircraft details open as a centered dialog above the collection. */
+.modal-backdrop:has(.detail-modal){inset:0;width:100%;align-items:center;justify-content:center;padding:32px;background:#18181b66;backdrop-filter:blur(5px);}
+.detail-modal{width:860px;max-width:100%;height:auto;max-height:calc(100dvh - 64px);border-radius:24px;box-shadow:0 24px 80px #0003;overscroll-behavior:contain;animation:dialog-in 300ms var(--ease-out);}
+.detail-modal .detail-images{grid-template-columns:1.2fr 1fr;height:250px;gap:3px;}
+.detail-modal .detail-images img{height:100%;min-width:0;object-fit:cover;}
+.detail-modal .detail-body{padding:28px 32px 32px;}
+.detail-modal .detail-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
+.detail-modal .detail-specs{grid-template-columns:repeat(2,minmax(0,1fr));}
+.detail-modal .detail-close{width:38px;height:38px;box-shadow:0 2px 12px #0002;}
+@keyframes dialog-in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:640px){
+ .modal-backdrop:has(.detail-modal){padding:12px;}
+ .detail-modal{border-radius:20px;max-height:calc(100dvh - 24px);}
+ .detail-modal .detail-images{height:200px;grid-template-columns:1fr;}
+ .detail-modal .detail-images img:first-child{grid-column:auto;}
+ .detail-modal .detail-body{padding:24px 20px;}
+ .detail-modal .detail-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+ .detail-modal .detail-specs{grid-template-columns:1fr;}
+}
+
+/* Quiet, usable scrollbars across the page and scrollable panels. */
+html,.filter-sidebar,.detail-modal,.mission-modal,.comparison-scroll{
+ scrollbar-width:thin;
+ scrollbar-color:#c5c5ca transparent;
+}
+.filter-sidebar,.detail-modal,.mission-modal{scrollbar-color:#d5d5d9 transparent;}
+.filter-sidebar:hover,.detail-modal:hover,.mission-modal:hover{scrollbar-color:#ababB2 transparent;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#c5c5ca;border-radius:999px;}
+::-webkit-scrollbar-thumb:hover{background:#92929b;}
+::-webkit-scrollbar-corner{background:transparent;}
+@media(forced-colors:active){html,.filter-sidebar,.detail-modal,.mission-modal,.comparison-scroll{scrollbar-color:auto;}}

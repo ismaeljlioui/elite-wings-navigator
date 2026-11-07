@@ -1,0 +1,122 @@
+[
+  {
+    "id": "OMDW",
+    "city": "Dubai",
+    "name": "Al Maktoum International Airport",
+    "code": "DWC",
+    "coordinates": [
+      55.16235,
+      24.896171
+    ]
+  },
+  {
+    "id": "LSGG",
+    "city": "Geneva",
+    "name": "Geneva International Airport",
+    "code": "GVA",
+    "coordinates": [
+      6.10895,
+      46.238098
+    ]
+  },
+  {
+    "id": "VHHH",
+    "city": "Hong Kong",
+    "name": "Hong Kong International Airport",
+    "code": "HKG",
+    "coordinates": [
+      113.914862,
+      22.31184
+    ]
+  },
+  {
+    "id": "EGLF",
+    "city": "London",
+    "name": "Farnborough Airport",
+    "code": "FAB",
+    "coordinates": [
+      -0.776333,
+      51.275799
+    ]
+  },
+  {
+    "id": "KVNY",
+    "city": "Los Angeles",
+    "name": "Van Nuys Airport",
+    "code": "VNY",
+    "coordinates": [
+      -118.489998,
+      34.209801
+    ]
+  },
+  {
+    "id": "KOPF",
+    "city": "Miami",
+    "name": "Miami-Opa Locka Executive Airport",
+    "code": "OPF",
+    "coordinates": [
+      -80.278397,
+      25.907
+    ]
+  },
+  {
+    "id": "KTEB",
+    "city": "New York",
+    "name": "Teterboro Airport",
+    "code": "TEB",
+    "coordinates": [
+      -74.060799,
+      40.850101
+    ]
+  },
+  {
+    "id": "LFPB",
+    "city": "Paris",
+    "name": "Paris-Le Bourget International Airport",
+    "code": "LBG",
+    "coordinates": [
+      2.436539,
+      48.962276
+    ]
+  },
+  {
+    "id": "KSFO",
+    "city": "San Francisco",
+    "name": "San Francisco International Airport",
+    "code": "SFO",
+    "coordinates": [
+      -122.374821,
+      37.619806
+    ]
+  },
+  {
+    "id": "WSSS",
+    "city": "Singapore",
+    "name": "Singapore Changi Airport",
+    "code": "SIN",
+    "coordinates": [
+      103.994003,
+      1.35019
+    ]
+  },
+  {
+    "id": "RJTT",
+    "city": "Tokyo",
+    "name": "Tokyo Haneda International Airport",
+    "code": "HND",
+    "coordinates": [
+      139.786958,
+      35.549678
+    ]
+  },
+  {
+    "id": "CYYZ",
+    "city": "Toronto",
+    "name": "Toronto Pearson International Airport",
+    "code": "YYZ",
+    "coordinates": [
+      -79.629421,
+      43.675935
+    ]
+  }
+]

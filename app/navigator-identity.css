@@ -1,0 +1,85 @@
+/* Aviation identity: clear instruments, quiet chrome, photography in focus. */
+:root {
+  --ink: #191c20;
+  --muted: #71757b;
+  --accent: #363e48;
+  --motion-arrive: cubic-bezier(.22, 1, .36, 1);
+}
+.dashboard-main,.compare-main { padding:32px 32px 260px; }
+.dashboard-heading { align-items:flex-end; gap:24px; margin-bottom:24px; }
+.navigator-identity { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+.navigator-wordmark { font-size:12px; font-weight:750; letter-spacing:2px; color:#202328; }
+.navigator-edition { border-left:1px solid #d9dce0; padding-left:14px; font-size:11px; color:#747980; }
+.navigator-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.dashboard-heading h1,.compare-heading h1 { margin:0; font-size:28px; line-height:1.25; font-weight:650; letter-spacing:-1px; }
+.result-count { padding:5px 9px; border:1px solid #e5e7ea; border-radius:7px; color:#69717b; font-size:11px; font-variant-numeric:tabular-nums; }
+.navigator-purpose { margin-top:7px; font-size:12px; line-height:1.6; color:#737880; }
+.dashboard-tools { flex-wrap:wrap; gap:8px; }
+.dashboard-tools .saved-button[data-slot="button"],.dashboard-tools .route-entry[data-slot="button"] { display:flex; gap:7px; min-height:42px; padding:0 12px; border:1px solid #e5e7ea; border-radius:999px; color:#444b53; font-size:12px; }
+.dashboard-tools .route-entry[data-slot="button"] { background:#f4f5f6; border-color:#f4f5f6; }
+.dashboard-tools .saved-button[aria-pressed="true"] { background:#191c20; color:#fff; border-color:#191c20; }
+.dashboard-tools .saved-button span { display:inline; }
+.category-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:0 0 20px; margin:0 0 24px; border-bottom:1px solid #eceef0; }
+.category-choice { display:flex; align-items:center; flex-shrink:0; gap:7px; padding:9px 11px; min-height:36px; border:1px solid transparent; border-radius:999px; color:#616971; font-size:11px; white-space:nowrap; }
+.category-choice:hover { background:#f4f5f6; color:#191c20; }
+.category-choice[aria-pressed="true"] { background:#191c20; color:white; }
+.category-choice small { font-size:10px; opacity:.65; font-variant-numeric:tabular-nums; }
+.category-dot { width:6px; height:6px; border-radius:50%; background:#8194aa; }
+.category-dot[data-category="Very light"] { background:#a292b6; }
+.category-dot[data-category="Light"] { background:#8ba4c4; }
+.category-dot[data-category="Super light"] { background:#79a8aa; }
+.category-dot[data-category="Midsize"] { background:#90a174; }
+.category-dot[data-category="Super midsize"] { background:#b7a16d; }
+.category-dot[data-category="Large cabin"] { background:#bc9681; }
+.dashboard-shell .jet-grid { gap:24px; }
+.tilt-frame .jet-card,.tilt-frame .jet-card:hover { aspect-ratio:1.36; min-height:400px; }
+.tilt-frame .dashboard-specs strong,.detail-stats strong,.comparison-table td { font-variant-numeric:tabular-nums; }
+.tilt-frame .dashboard-specs span { min-height:0; }
+.tilt-frame .card-actions { padding-top:10px; }
+.tilt-frame .dashboard-photo img:not(.card-ambient) { animation:photo-arrive 420ms var(--motion-arrive); }
+.tilt-frame:focus-within { z-index:2; }
+.detail-modal .detail-stats { padding:22px 0; margin:24px 0; border-block:1px solid #e9ebee; }
+.detail-modal .detail-stats>div { padding-left:16px; border-left:1px solid #e9ebee; }
+.detail-modal .detail-stats>div:first-child { padding-left:0; border-left:0; }
+.detail-modal .detail-stats svg { color:#85909c; width:18px; height:18px; }
+.detail-modal .detail-title h2 { font-size:30px; letter-spacing:-1px; }
+.detail-modal .description { font-size:14px; line-height:1.85; color:#626970; }
+.detail-modal .source-note { color:#7d8288; font-size:11px; line-height:1.6; }
+.dashboard-mission { background:#f3f5f6; border-color:#e4e8ec; }
+.compare-heading { margin-top:0; }
+.compare-heading p { color:#737880; font-size:13px; }
+.shortlist-stack { animation:surface-in 280ms var(--motion-arrive); }
+.app-select-popup,.detail-modal,.mission-modal { --ease-out:var(--motion-arrive); }
+@keyframes photo-arrive { from { opacity:.5; } to { opacity:1; } }
+@media(min-width:1480px) {
+  .dashboard-shell .jet-grid,body:has(.detail-modal) .dashboard-shell .jet-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media(min-width:900px) and (max-width:1479px) {
+  .dashboard-shell .jet-grid,body:has(.detail-modal) .dashboard-shell .jet-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:1100px) {
+  .dashboard-heading { flex-wrap:wrap; }
+  .dashboard-tools { justify-content:flex-start; flex-basis:100%; }
+  .category-strip { margin-bottom:20px; }
+}
+@media(max-width:899px) {
+  .dashboard-shell .jet-grid { grid-template-columns:1fr; }
+}
+@media(max-width:640px) {
+  .dashboard-main,.compare-main { padding:24px 16px 280px; }
+  .navigator-identity { gap:10px; margin-bottom:16px; }
+  .navigator-wordmark { font-size:11px; letter-spacing:1.5px; }
+  .navigator-edition { padding-left:10px; font-size:10px; }
+  .dashboard-heading h1,.compare-heading h1 { font-size:25px; }
+  .dashboard-heading { gap:16px; margin-bottom:18px; }
+  .navigator-purpose { max-width:290px; }
+  .dashboard-tools { gap:6px; }
+  .dashboard-tools .route-entry[data-slot="button"] { flex:1; }
+  .dashboard-tools .app-select-trigger { width:100%; }
+  .category-strip { padding-bottom:14px; }
+  .tilt-frame .jet-card,.tilt-frame .jet-card:hover { min-height:410px; }
+  .detail-modal .detail-stats>div:nth-child(3) { padding-left:0; border-left:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .shortlist-stack,.tilt-frame .dashboard-photo img:not(.card-ambient) { animation:none; }
+}
